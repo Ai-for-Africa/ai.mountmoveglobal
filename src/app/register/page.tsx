@@ -92,7 +92,7 @@ export default function RegisterPage() {
     mode: 'onChange',
     defaultValues: {
       aiToolsUsed: [], currentSkills: [], learningGoals: [],
-      incomeStreams: [], devices: [], consentGiven: false,
+      incomeStreams: [], devices: [], consentGiven: true,
     },
   });
 

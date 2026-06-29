@@ -2,7 +2,7 @@
 import { useFormContext } from 'react-hook-form';
 import type { RegistrationFormData } from '@/lib/validation/registration';
 
-const orgOptions = [
+const orgOptions: { value: RegistrationFormData['organisationInterest']; label: string }[] = [
   { value: 'YES', label: "Yes — I'd love to discuss a group or corporate booking" },
   { value: 'MAYBE', label: "Maybe — I'd share information with my team first" },
   { value: 'NO', label: "No — I'm registering for myself only" },
@@ -90,7 +90,7 @@ export function Section5Final() {
       <div>
         <button
           type="button"
-          onClick={() => setValue('consentGiven', !consentGiven, { shouldValidate: true })}
+          onClick={() => setValue('consentGiven', !consentGiven as RegistrationFormData['consentGiven'], { shouldValidate: true })}
           style={{
             display: 'flex', alignItems: 'flex-start', gap: '0.875rem',
             width: '100%', textAlign: 'left', padding: '1.125rem 1.25rem',

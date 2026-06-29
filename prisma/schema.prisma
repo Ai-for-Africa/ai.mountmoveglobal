@@ -1,0 +1,171 @@
+// Database: PostgreSQL via Supabase
+// Uses Supabase direct connection for migrations, pooler URL for app queries
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AttendanceMode {
+  PHYSICAL
+  VIRTUAL
+  UNSURE
+}
+
+enum ProfileType {
+  STUDENT_GRADUATE
+  EMPLOYED_PROFESSIONAL
+  FREELANCER_CREATIVE
+  ENTREPRENEUR
+  JOB_SEEKER
+  TEACHER_TRAINER
+  CONTENT_CREATOR
+  NGO_GOVERNMENT
+  OTHER
+}
+
+enum AIExperience {
+  COMPLETE_BEGINNER
+  CURIOUS_EXPLORER
+  OCCASIONAL_USER
+  REGULAR_USER
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYSTACK
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+  RECEIPT_SUBMITTED
+}
+
+enum RegistrationStatus {
+  DRAFT
+  PAYMENT_PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Registration {
+  id                    String             @id @default(cuid())
+  referenceId           String             @unique // MMG-XXXXXX human-readable ref
+
+  // Section 1: Personal Info
+  fullName              String
+  phoneWhatsapp         String
+  email                 String
+  cityState             String
+  attendanceMode        AttendanceMode
+
+  // Section 2: Background
+  profileType           ProfileType
+  aiExperience          AIExperience
+  aiToolsUsed           String[]
+  currentSkills         String[]
+
+  // Section 3: Learning Goals
+  learningGoals         String[]
+  primaryGoal           String             @db.Text
+  incomeStreams         String[]
+
+  // Section 4: Commitment & Logistics
+  devices               String[]
+  internetAccess        String
+  saturdayCommitment    String
+  howHeard              String
+
+  // Section 5: Final Details
+  specificStruggle      String?            @db.Text
+  organisationInterest  String?
+  consentGiven          Boolean            @default(false)
+
+  // Status
+  status                RegistrationStatus @default(DRAFT)
+
+  // Relations
+  payment               Payment?
+
+  // Timestamps
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  completedAt           DateTime?
+
+  @@index([email])
+  @@index([referenceId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Payment {
+  id                    String          @id @default(cuid())
+  registrationId        String          @unique
+  registration          Registration    @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  provider              PaymentProvider
+  status                PaymentStatus   @default(PENDING)
+
+  // Amount in kobo (Paystack) or cents (Stripe) — store smallest unit
+  // For bank transfer store in kobo (30000 kobo = ₦30)... actually store naira amount as int * 100
+  amount                Int
+  currency              String          @default("NGN")
+
+  // Provider-specific references
+  providerReference     String?         // Stripe session ID or Paystack reference
+  providerPaymentId     String?         // Stripe payment_intent ID or Paystack transaction ID
+  webhookEventId        String?         // idempotency: track processed webhook events
+
+  // Bank transfer specific
+  receiptUrl            String?         // Supabase Storage URL for uploaded receipt
+  receiptFileName       String?
+  transferNarration     String?         // narration/note on the transfer
+  bankTransferNote      String?         // internal admin notes
+
+  // Metadata
+  customerEmail         String
+  metadata              Json?
+
+  // Timestamps
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  verifiedAt            DateTime?
+
+  @@index([providerReference])
+  @@index([providerPaymentId])
+  @@index([status])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String   // "stripe" | "paystack"
+  eventId     String   @unique
+  eventType   String
+  payload     Json
+  processed   Boolean  @default(false)
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
+  @@index([processed])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
